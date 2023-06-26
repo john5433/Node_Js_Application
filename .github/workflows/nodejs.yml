@@ -27,7 +27,7 @@ jobs:
         pm2 --version || true
     - name: Stop existing PM2 processes
       run: |
-        cd /home/ubuntu/actions-runner/_work/Node_js_Application/Node_js_Application
+        cd /home/ubuntu/actions-runner/_work/Node_Js_Application/Node_Js_Application
         pm2 delete all || true
     - name: Start application with PM2
       run: |
