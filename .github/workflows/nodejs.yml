@@ -1,7 +1,14 @@
-name: Node.js CI 
+name: Node.js CI
 on:
   push:
     branches: [ "master" ]
+env:
+  AWS_REGION: us-west-2                 # set this to your preferred AWS region, e.g. us-west-1
+  ECR_REPOSITORY: my-node-app          # set this to your Amazon ECR repository name
+  ECS_SERVICE: my-node-app                # set this to your Amazon ECS service name
+  ECS_CLUSTER: DEMO                 # set this to your Amazon ECS cluster name
+  ECS_TASK_DEFINITION: .github/workflows/task-definition.json
+  CONTAINER_NAME: node-app
 jobs:
   build:
     runs-on: self-hosted
@@ -14,13 +21,11 @@ jobs:
           sudo apt-get install -y nodejs
           node --version
           npm --version
-
       - name: Install docker
         run: |
-             sudo apt-get update -y
-             sudo apt install docker.io -y 
-             sudo usermod -aG docker $USER
-
+            sudo apt-get update -y
+            sudo apt install docker.io -y
+            sudo usermod -aG docker $USER
   Installing_pm2_and_deploy_application:
    needs: [build]
    runs-on: self-hosted
@@ -33,36 +38,58 @@ jobs:
         pm2 --version || true
     - name: Stop existing PM2 processes
       run: |
-        cd /home/ubuntu/actions-runner/_work/Node_Js_Application/Node_Js_Application
+        cd /home/ubuntu/actions-runner/_work/Node_js_Application/Node_js_Application
         pm2 delete all || true
     - name: Start application with PM2
       run: |
-        cd /home/ubuntu/actions-runner/_work/Node_Js_Application/Node_Js_Application
+        cd /home/ubuntu/actions-runner/_work/Node_js_Application/Node_js_Application
         pm2 start index.js --name "my-node-app"
     - name: Check application status
-      run: |
-          pm2 status
+      run: pm2 status
   Create_Docker_image:
    needs: [Installing_pm2_and_deploy_application]
    runs-on: self-hosted
-   steps: 
+   steps:
      - name: Checkout code
        uses: actions/checkout@v3
      - name: build image
-       run: |           
-            sudo docker build /home/ubuntu/actions-runner/_work/Node_Js_Application/Node_Js_Application --tag my-node-app
+       run: |
+            sudo docker build /home/ubuntu/actions-runner/_work/Node_js_Application/Node_js_Application --tag my-node-app
      - name: check docker images
-       run: |           
-           sudo docker images
-  Pushing_Docker_image_in_jfrog:
-   needs: Create_Docker_image
+       run: |
+           docker images
+  Configure_AWS_and_Deploy_Application_To_ECS:
+   needs: [Create_Docker_image]
    runs-on: self-hosted
    steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
-    - name: Push Docker image
-      run: |
-        docker login -umohit@arintech.in -p ${{ secrets.DOCKER_PASSWORD }} arintech01.jfrog.io
-        docker tag my-node-app:latest arintech01.jfrog.io/my-jfrog-repository/my-node-app:latest
-        docker push arintech01.jfrog.io/my-jfrog-repository/my-node-app:latest
-         
+     - name: Configure AWS credentials
+       run: |
+          sudo apt install awscli -y
+          aws --version
+          aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws configure set default.region us-west-2  # Set your desired region
+     - name: Login to Amazon ECR
+       run: |
+          aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin 340704870584.dkr.ecr.us-west-2.amazonaws.com
+     - name: Verify Docker Image and Tag
+       run: |
+          docker images
+          docker tag my-node-app:latest 340704870584.dkr.ecr.us-west-2.amazonaws.com/my-node-app:latest
+     - name: Push Docker Image to ECR
+       run: |
+          docker push 340704870584.dkr.ecr.us-west-2.amazonaws.com/my-node-app:latest
+     - name: Fill in the new image ID in the Amazon ECS task definition
+       id: task-def
+       uses: aws-actions/amazon-ecs-render-task-definition@v1
+       with:
+        task-definition: ${{ env.ECS_TASK_DEFINITION }}
+        container-name: ${{ env.CONTAINER_NAME }}
+        image: 340704870584.dkr.ecr.us-west-2.amazonaws.com/my-node-app
+     - name: Deploy Amazon ECS task definition
+       uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+       with:
+        task-definition: ${{ steps.task-def.outputs.task-definition }}
+        service: ${{ env.ECS_SERVICE }}
+        cluster: ${{ env.ECS_CLUSTER }}
+        wait-for-service-stability: true
