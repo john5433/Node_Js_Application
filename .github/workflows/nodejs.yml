@@ -41,4 +41,5 @@ jobs:
         pm2 start index.js --name "my-node-app"
     - name: Check application status
       run: |
-          sudo pm2 status
+           pm2 status
+           pm2 logs
