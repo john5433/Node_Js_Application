@@ -38,7 +38,7 @@ jobs:
     - name: Start application with PM2
       run: |
         cd /home/ubuntu/_work/Node_Js_Application/Node_Js_Application
-        pm2 start --no-daemon index.js --name "my-node-app"
+        pm2 start daemon index.js --name "my-node-app"
     - name: Check application status
       run: |
            pm2 status
