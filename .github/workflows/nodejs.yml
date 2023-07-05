@@ -66,7 +66,7 @@ jobs:
         sudo docker tag my-node-app:latest arintech01.jfrog.io/my-jfrog-repository/my-node-app:latest
         sudo docker push arintech01.jfrog.io/my-jfrog-repository/my-node-app:latest
            
-  Configure_AWS_and_Deploy_Application_To_ECS:
+  Configure_AWS:
     needs: [Create_Docker_image]
     runs-on: self-hosted
     steps:      
@@ -79,7 +79,7 @@ jobs:
            aws configure set default.region us-west-2  # Set your desired region
 
   Configure_ECS:
-    needs: Configure_AWS_and_Deploy_Application_To_ECS
+    needs: Configure_AWS
     runs-on: self-hosted
     steps:      
     
