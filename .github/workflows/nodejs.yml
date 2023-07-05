@@ -87,3 +87,13 @@ jobs:
         run: |
            aws ecs create-cluster --cluster-name my-node-student01
  
+      - name: Register Task_Definition
+        run: |
+             aws ecs register-task-definition --cli-input-json file://.github/workflows/task-definition.json
+             aws ecs list-task-definitions
+             
+      - name: Fetch Revision number of Task_Definition
+        run: |
+         latest_revision=$(aws ecs describe-task-definition --task-definition node-app-deploy --query 'taskDefinition.revision')
+         echo "Latest revision: $latest_revision"
+
