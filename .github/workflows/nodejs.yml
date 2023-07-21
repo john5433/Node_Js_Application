@@ -123,3 +123,4 @@ jobs:
          eni_id=$eni_number
          public_ip=$(aws ec2 describe-network-interfaces --network-interface-ids $eni_id --query 'NetworkInterfaces[0].Association.PublicIp' --output text)
          echo $public_ip
+         
