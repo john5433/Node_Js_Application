@@ -62,7 +62,7 @@ jobs:
       uses: actions/checkout@v2
     - name: Push Docker image
       run: |
-        sudo docker login -ujohnalberto.dev@gmail.com arintech03.jfrog.io -p ${{ secrets.DOCKER_PASSWORD }} arintech03.jfrog.io
+        sudo docker login -ujohnalberto.dev@gmail.com -p ${{ secrets.DOCKER_PASSWORD }} arintech03.jfrog.io
         sudo docker tag my-node-app:latest arintech03.jfrog.io/my-jfrog-repository/my-node-app:latest
         sudo docker push arintech03.jfrog.io/my-jfrog-repository/my-node-app:latest
            
